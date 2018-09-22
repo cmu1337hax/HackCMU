@@ -5,6 +5,7 @@
 
 #define CONTOUR_AREA 75
 #define CONTOUR_AREA_MAX 25000
+#define nl "\n"
 
 using namespace std;
 using namespace cv;
@@ -25,9 +26,10 @@ int main(){
     namedWindow("Debug View",1);
 
     while(true){
-        Mat frame;// = imread("test2.jpg");
+        Mat frame; //= imread("test3.jpg");
         cap >> frame; // get a new frame from camera
 
+        cout<<"Loaded Frame!"<<nl;
 
         /*Text Detection*/
         //greyscale
@@ -35,24 +37,33 @@ int main(){
         cvtColor(frame,grey,CV_BGR2GRAY);
         grey.convertTo(grey, CV_8U);
 
+        cout<<"Greyscaled!"<<nl;
+
         //blur
         Mat blur;
         GaussianBlur(grey,blur,Size(3,3),1.5); //kernel size, sigma y
 
+        cout<<"Blurred!"<<nl;
+
         //open
-        Mat const structure_elem = cv::getStructuringElement(MORPH_RECT, Size(5, 5)); //rect for morphologyEx
+        Mat const structure_elem = cv::getStructuringElement(MORPH_RECT, Size(4, 2)); //rect for morphologyEx
         Mat open;
         morphologyEx(blur, open, MORPH_OPEN, structure_elem);
+
+        cout<<"Opened!"<<nl;
 
         //Threshold
         Mat threshold;
         adaptiveThreshold(open, threshold, 255, CV_ADAPTIVE_THRESH_GAUSSIAN_C, CV_THRESH_BINARY_INV, 51, 10);
 
+        cout<<"Thresholded!"<<nl;
 
         //close
         Mat const structure_elem1 = cv::getStructuringElement(MORPH_ELLIPSE, Size(3, 3)); //rect for morphologyEx
         Mat close;
         morphologyEx(threshold, close, MORPH_CLOSE, structure_elem1);
+
+        cout<<"Closed!"<<nl;
 
         //contours
         vector<vector<Point>> contours;
