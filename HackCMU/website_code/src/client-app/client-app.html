@@ -20,6 +20,7 @@
     var firstProcess = 0;
     var magician;
     var staticMagician;
+    var oldFile;
         "use strict";
     
         /**
@@ -54,6 +55,23 @@
           altar.setScale(1.5, 1);
           //altar.x = 400;
           //altar.y = 500;
+          
+          var oldFile = "/output.txt";
+          //This doesn't work as the file changes it locally.
+          var rawFile = new XMLHttpRequest();
+            rawFile.open("GET", oldFile, false);
+            rawFile.onreadystatechange = function ()
+            {
+                if(rawFile.readyState === 4)
+                {
+                    if(rawFile.status === 200 || rawFile.status == 0)
+                    {
+                        var allText = rawFile.responseText;
+                        oldText = allText;
+                        alert(allText);
+                    }
+            }
+            }
 
           scene.anims.create({
                 key: 'performMagic',
@@ -65,6 +83,25 @@
         update( time, delta) {
           var scene = this;
           
+          var file = "../output.txt";
+          var rawFile = new XMLHttpRequest();
+          rawFile.open("GET", file, false);
+          rawFile.onreadystatechange = function ()
+          {
+            if(rawFile.readyState === 4)
+              {
+                if(rawFile.status === 200 || rawFile.status == 0)
+                    {
+                        if(oldText != allText) {
+                          oldText = allText;
+                          var allText = rawFile.responseText;
+                          document.getElementById("printText").innerHTML = newText;
+                          alert(allText);
+                        }
+                  }
+            }
+          }
+
           if(processing) {
             if(firstProcess == 0) {
               firstProcess = 1;

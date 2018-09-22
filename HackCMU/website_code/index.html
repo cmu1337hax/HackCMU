@@ -15,6 +15,7 @@
     <link rel="import" href="bower_components/font-roboto-local/roboto.html">
     <link rel="import" href="src/client-app/client-app.html">
     <link rel="import" href="src/client-app/dragndrop.html">
+    <link rel="import" href="/output.txt">
     <style>
       html { font-family: 'Roboto', sans-serif;
              -webkit-font-smoothing: antialiased; }
@@ -32,6 +33,7 @@
             <p>Upload multiple files with the file dialog or by dragging and dropping images onto the dashed region</p>
           </form>
           <progress id="progress-bar" max=100 value=0></progress>
+          <select onchange="getAIFile()"></select>
           <div id="gallery"></div>
           <div id= "canvasconverter"></div>
           <canvas id="canvas"></canvas>

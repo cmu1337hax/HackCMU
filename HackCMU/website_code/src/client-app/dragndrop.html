@@ -148,7 +148,7 @@
         })
         .then(function send(){ 
             processing = true;
-            changeText("YES!");
+            //changeText("YES!");
             progressDone(); 
         })  
         .catch(() => { /* Error. Inform the user */ })
@@ -157,7 +157,7 @@
     function finishedProcessing() {
         processing = false;
         firstProcess = 0;
-        //changeText("YES!");
+        changeText("YES!");
     }
 
     function previewFile(file) {
@@ -186,6 +186,38 @@
     function changeText(newText){
         console.log('hi');
         document.getElementById("printText").innerHTML = newText;
+        return '';
+    }
+
+    function getAIFile() {
+            var file = "../AItext.txt";
+            var rawFile = new XMLHttpRequest();
+            rawFile.open("GET", file, false);
+            rawFile.onreadystatechange = function ()
+            {
+                if(rawFile.readyState === 4)
+                {
+                    if(rawFile.status === 200 || rawFile.status == 0)
+                    {
+                        var allText = rawFile.responseText;
+                        document.getElementById("printText").innerHTML = newText;
+                        alert(allText);
+            }
+        }
+    }
+
+    rawFile.send(null);/*
+            var fr = new FileReader();
+            fr.onload = function()
+            {
+                showDataFile(e, o);
+            };
+            fr.readAsText(o.files[0]);*/
+    }
+
+    function showDataFile(e, o)
+    {
+        document.getElementById("data").innerText = e.target.result;
     }
 </script>
 </dom-module>
