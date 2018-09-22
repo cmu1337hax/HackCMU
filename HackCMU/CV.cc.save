@@ -12,20 +12,11 @@
 #define nl "\n"
 #define _XOPEN_SOURCE 500
 
-struct MatchPathSeparator
-{
-    bool operator()( char ch ) const
-    {
+struct MatchPathSeparator{
+    bool operator()( char ch ) const{
         return ch == '/';
     }
 };
-
-std::string basename( std::string const& pathname ){
-    return std::string(
-        std::find_if( pathname.rbegin(), pathname.rend(),
-                      MatchPathSeparator() ).base(),
-        pathname.end() );
-}
 
 using namespace std;
 using namespace cv;
@@ -34,6 +25,7 @@ void findWords(string);
 int wordsToLetters(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf);
 int wtlr(string);
 
+string basename( string const& pathname );
 int rmrf(char *path);
 int unlink_cb(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf);
 bool compareFn(const Rect & l, const Rect &r);
@@ -43,7 +35,7 @@ int main(){
     cout<<"segmenting words"<<endl;
     string folder = "output";
     cout<<wtlr(folder.c_str())<<endl;
-    cout<<strerror(errno)<<endl;
+    cout<<"Words Segmented!"<<endl;
 
     return 0;
 }
@@ -242,54 +234,60 @@ int wordsToLetters(const char *fpath, const struct stat *sb, int typeflag, struc
 
     Mat word;
 
-    if(boundRect.size()>0){}
-    for (int idx = 0; idx >= 0; idx = hierarchy[idx][0]){
-        // calculate parameters for filter the letters
-        approxPolyDP(Mat(contours[idx]), contours_poly[idx], 3, true);
-        boundRect[idx] = boundingRect(Mat(contours_poly[idx]));
-        float occupyrate;
-        occupyrate = (contourArea(contours[idx]) / (boundRect[idx].width * boundRect[idx].height));
-        float aspectratio;
-        aspectratio = max(boundRect[idx].height, boundRect[idx].width) / min(boundRect[idx].height, boundRect[idx].width);
-        float perimeter;
-        perimeter = arcLength(contours[idx], true);
-        float compactness;
-        compactness = contourArea(contours[idx]) / (perimeter * perimeter);
+    if(boundRect.size()>0){
+        for (int idx = 0; idx >= 0; idx = hierarchy[idx][0]){
+            // calculate parameters for filter the letters
+            approxPolyDP(Mat(contours[idx]), contours_poly[idx], 3, true);
+            boundRect[idx] = boundingRect(Mat(contours_poly[idx]));
+            float occupyrate;
+            occupyrate = (contourArea(contours[idx]) / (boundRect[idx].width * boundRect[idx].height));
+            float aspectratio;
+            aspectratio = max(boundRect[idx].height, boundRect[idx].width) / min(boundRect[idx].height, boundRect[idx].width);
+            float perimeter;
+            perimeter = arcLength(contours[idx], true);
+            float compactness;
+            compactness = contourArea(contours[idx]) / (perimeter * perimeter);
 
-        // filter contours by region areas and parameters and draw
-        if ((contourArea(contours[idx]) > CONTOUR_AREA) & (contourArea(contours[idx]) <= CONTOUR_AREA_MAX))
-            if ((occupyrate >= 0.03) & (occupyrate <= 0.95))
-                if (aspectratio <= 6)
-                    if ((compactness > 0.0003) & (compactness <= 0.95))
-                        words.push_back(boundRect[idx]);
+            // filter contours by region areas and parameters and draw
+            if ((contourArea(contours[idx]) > CONTOUR_AREA) & (contourArea(contours[idx]) <= CONTOUR_AREA_MAX))
+                if ((occupyrate >= 0.03) & (occupyrate <= 0.95))
+                    if (aspectratio <= 6)
+                        if ((compactness > 0.0003) & (compactness <= 0.95))
+                            words.push_back(boundRect[idx]);
+        }
+
+        stable_sort(words.begin(), words.end(), compareFn);
+
+        cout<<"Sorted!"<<nl;
+
+        for (auto it = words.begin(); it!=words.end(); ++it){
+            string index = to_string(distance(words.begin(),it));
+
+            Rect crop(Point(it->x, it->y), Point(it->x+it->width, it->y + it->height));
+
+            word = threshold(crop);
+            bitwise_not(word,word);
+            threshold(word, word, 127, 255, THRESH_BINARY);
+
+            resize(word,word, Size(8,8),0,0,INTER_LINEAR);
+
+            string file = "letter";
+            file += index;
+            file += ".jpg";
+
+            cout<<"Saving: "<<file<<"..."<<nl;
+            if(imwrite(file, word))
+                cout<<"Saved!"<<nl;
+            else
+                cout<<"Failed!"<<nl;
+
+            rectangle( frame, Point(it->x, it->y), Point(it->x+it->width, it->y + it->height), Scalar( 0, 255, 0 ), 2, 8, 0 );
+            putText(frame, index, Point(it->x+it->width, it->y + it->height), FONT_HERSHEY_COMPLEX_SMALL, 0.8, Scalar( 0, 255, 0 ), 1, CV_AA);
+
+        }
     }
 
-    stable_sort(words.begin(), words.end(), compareFn);
-
-    cout<<"Sorted!"<<nl;
-
-    for (auto it = words.begin(); it!=words.end(); ++it){
-        string index = to_string(distance(words.begin(),it));
-
-        Rect crop(Point(it->x, it->y), Point(it->x+it->width, it->y + it->height));
-        word = frame(crop);
-
-        string file = "letter";
-        file += index;
-        file += ".jpg";
-
-        cout<<"Saving: "<<file<<"..."<<nl;
-        if(imwrite(file, word))
-            cout<<"Saved!"<<nl;
-        else
-            cout<<"Failed!"<<nl;
-
-        rectangle( frame, Point(it->x, it->y), Point(it->x+it->width, it->y + it->height), Scalar( 0, 255, 0 ), 2, 8, 0 );
-        putText(frame, index, Point(it->x+it->width, it->y + it->height), FONT_HERSHEY_COMPLEX_SMALL, 0.8, Scalar( 0, 255, 0 ), 1, CV_AA);
-
-    }
-    
-    
+    remove(basename(fpath));
     cout<<"Finished Word!"<<endl;
     words.clear();
     return 0;
@@ -319,4 +317,11 @@ bool compareFn(const Rect & l, const Rect &r) {//return l<r
         return l.x<r.x;
 
 
+}
+
+string basename( string const& pathname ){
+    return std::string(
+        std::find_if( pathname.rbegin(), pathname.rend(),
+                      MatchPathSeparator() ).base(),
+        pathname.end() );
 }

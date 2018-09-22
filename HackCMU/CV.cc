@@ -12,20 +12,11 @@
 #define nl "\n"
 #define _XOPEN_SOURCE 500
 
-struct MatchPathSeparator
-{
-    bool operator()( char ch ) const
-    {
+struct MatchPathSeparator{
+    bool operator()( char ch ) const{
         return ch == '/';
     }
 };
-
-std::string basename( std::string const& pathname ){
-    return std::string(
-        std::find_if( pathname.rbegin(), pathname.rend(),
-                      MatchPathSeparator() ).base(),
-        pathname.end() );
-}
 
 using namespace std;
 using namespace cv;
@@ -34,6 +25,7 @@ void findWords(string);
 int wordsToLetters(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf);
 int wtlr(string);
 
+string basename( string const& pathname );
 int rmrf(char *path);
 int unlink_cb(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf);
 bool compareFn(const Rect & l, const Rect &r);
@@ -43,7 +35,7 @@ int main(){
     cout<<"segmenting words"<<endl;
     string folder = "output";
     cout<<wtlr(folder.c_str())<<endl;
-    cout<<strerror(errno)<<endl;
+    cout<<"Words Segmented!"<<endl;
 
     return 0;
 }
@@ -272,7 +264,12 @@ int wordsToLetters(const char *fpath, const struct stat *sb, int typeflag, struc
             string index = to_string(distance(words.begin(),it));
 
             Rect crop(Point(it->x, it->y), Point(it->x+it->width, it->y + it->height));
-            word = frame(crop);
+
+            word = threshold(crop);
+            bitwise_not(word,word);
+            cv::threshold(word, word, 0, 255, THRESH_BINARY);
+
+            resize(word,word, Size(8,8),0,0,INTER_LINEAR);
 
             string file = "letter";
             file += index;
@@ -290,7 +287,7 @@ int wordsToLetters(const char *fpath, const struct stat *sb, int typeflag, struc
         }
     }
 
-
+    remove(basename(fpath));
     cout<<"Finished Word!"<<endl;
     words.clear();
     return 0;
@@ -320,4 +317,11 @@ bool compareFn(const Rect & l, const Rect &r) {//return l<r
         return l.x<r.x;
 
 
+}
+
+string basename( string const& pathname ){
+    return std::string(
+        std::find_if( pathname.rbegin(), pathname.rend(),
+                      MatchPathSeparator() ).base(),
+        pathname.end() );
 }
