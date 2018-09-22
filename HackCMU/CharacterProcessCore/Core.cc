@@ -194,100 +194,42 @@ char guess(vector<float> img,float thresh)
 	return allOut[max];
 }
 
-void run(vector<float> img)
+bool write()
 {
-	ofstream blah;
-	blah.open("output.txt");
-	blah << guess(img, .80);
-	blah.close();
-
+	ofstream saveData;
+	saveData.open("saveData.bin", ios::out | ios::trunc | ios::binary);
+	if(saveData.is_open())
+	{
+		saveData.write((char*)&input.coefficients[0],input.size*sizeof(float));
+		for(int l = 0; l < 4; l++)
+		{
+			saveData.write((char*)&hidden[l].coefficients[0],hidden[l].size*sizeof(float));
+		}
+		for(int c = 0; c < 5; c++)
+		{
+			saveData.write((char*)&weights[c].edges[0],36*36*sizeof(float));
+		}
+		saveData.close();
+		cout << "Data Saved!";
+		return true;
+	}
+	else
+	{
+		cout << "Data failed to open!";
+		return false;
+	}
 }
 
-//string serialize(Layer l)
-//{
-//	string output;
-//	for(int i = 0; i < l.size;i++)
-//	{
-//		output.append(to_string(l.coefficients[i]));
-//		output.append(" ");
-//	}
-//	output.append("=");
-//	return output;
-//}
-//
-//char* serialize(Connection c)
-//{
-//	char* output;
-//	for(int i = 0; i < c.in.size;i++)
-//	{
-//		for(int o = 0; o < c.out.size;o++)
-//		{
-//			output += (to_string(c.edges[i][o])).c_str();
-//			output += (" ");
-//		}
-//	output += ("=");
-//	}
-//	return output;
-//}
-//
-//Layer toLayer(char* str, int n)
-//{
-//	Layer output = makeLayer(n);
-//	char* split = strtok(str," ");
-//	for(int i = 0; i < n; i++)
-//	{
-//		output.coefficients[i] = (float) atof(split[i]);
-//	}
-//
-//}
-//
-//bool write()
-//{
-//	ofstream saveData;
-//	saveData.open("saveData.bin", ios::out | ios::trunc | ios::binary);
-//	if(saveData.is_open())
-//	{
-//		saveData.write(serialize(input),input.size*sizeof(float));
-//		for(int l = 0; l < 4; l++)
-//		{
-//			saveData.write(serialize(hidden[l]),hidden[l].size*sizeof(float));
-//		}
-//		for(int c = 0; c < 5; c++)
-//		{
-//			saveData.write(serialize(weights[c]),36*36*sizeof(float));
-//		}
-//		saveData.close();
-//		cout << "Data Saved!";
-//		return true;
-//	}
-//	else
-//	{
-//		cout << "Data failed to open!";
-//		return false;
-//	}
-//}
-//
-//bool read()
-//{
-//	ifstream saveData;
-//	saveData.open("saveData.bin", ios::in | ios::binary);
-//	if(saveData.is_open())
-//	{
-//		char* temp;
-//		saveData.read(temp, input.size*sizeof(float));
-//		input = toLayer(temp, input.size);
-//		for(int l = 0; l < 4; l++)
-//		{
-//			saveData.read(temp,hidden[l].size*sizeof(float));
-//			hidden[l] = toLayer(temp,hidden[l].size);
-//		}
-//		saveData.close();
-//		cout << "Data read successfully";
-//		return true;
-//	}
-//	else
-//	{
-//		cout << "Data read failed";
-//		return false;
-//	}
-//}
+bool read()
+{
+	ifstream saveData;
+	saveData.open("saveData.bin", ios::in | ios::binary);
+	if(saveData.is_open())
+	{
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+}
