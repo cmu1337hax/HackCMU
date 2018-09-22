@@ -13,8 +13,6 @@ int img = 0;
 
 int main(){
 
-    /*
-
     //open camera
     VideoCapture cap(0);
     cap.set(CV_CAP_PROP_FRAME_WIDTH,1280);
@@ -27,37 +25,47 @@ int main(){
     namedWindow("Debug View",1);
 
     while(true){
-        Mat frame;
+        Mat frame;// = imread("test2.jpg");
         cap >> frame; // get a new frame from camera
-        */
 
-        Mat frame = imread("test.jpg");
 
         /*Text Detection*/
         //greyscale
         Mat grey;
         cvtColor(frame,grey,CV_BGR2GRAY);
         grey.convertTo(grey, CV_8U);
-
+        
+        /*words*/
         //blur
         Mat blur;
         GaussianBlur(grey,blur,Size(3,3),1.5); //kernel size, sigma y
-
         //open
         Mat const structure_elem = cv::getStructuringElement(MORPH_RECT, Size(5, 5)); //rect for morphologyEx
         Mat open;
         morphologyEx(blur, open, MORPH_OPEN, structure_elem);
-
         //Threshold
         Mat threshold;
-        adaptiveThreshold(open, threshold, 255, CV_ADAPTIVE_THRESH_GAUSSIAN_C, CV_THRESH_BINARY, 51, 10);
-
+        adaptiveThreshold(open, threshold, 255, CV_ADAPTIVE_THRESH_GAUSSIAN_C, CV_THRESH_BINARY_INV, 51, 10);
         //close
         Mat const structure_elem1 = cv::getStructuringElement(MORPH_ELLIPSE, Size(3, 3)); //rect for morphologyEx
         Mat close;
-        morphologyEx(threshold, close, MORPH_CLOSE, structure_elem);
+        morphologyEx(threshold, close, MORPH_CLOSE, structure_elem1);
 
-        /*
+        /*letters*/
+        //blur
+        Mat blur1;
+        GaussianBlur(grey,blur,Size(3,3),1.5); //kernel size, sigma y
+        //open
+        Mat const structure_elem2 = cv::getStructuringElement(MORPH_RECT, Size(1, 1)); //rect for morphologyEx
+        Mat open1;
+        morphologyEx(blur, open1, MORPH_OPEN, structure_elem2);
+        //Threshold
+        Mat threshold1;
+        adaptiveThreshold(open1, threshold1, 255, CV_ADAPTIVE_THRESH_GAUSSIAN_C, CV_THRESH_BINARY_INV, 51, 15);
+        //close
+        Mat const structure_elem3 = cv::getStructuringElement(MORPH_ELLIPSE, Size(1, 1)); //rect for morphologyEx
+        Mat close1;
+        morphologyEx(threshold1, close1, MORPH_CLOSE, structure_elem3);
 
         //contours
         vector<vector<Point>> contours;
@@ -87,7 +95,7 @@ int main(){
                 if ((contourArea(contours[idx]) > CONTOUR_AREA) & (contourArea(contours[idx]) <= CONTOUR_AREA_MAX)){
                     if ((occupyrate >= 0.03) & (occupyrate <= 0.95)){
                         if (aspectratio <= 6){
-                            if (compactness > 0.003 & compactness <= 0.95){
+                            if ((compactness > 0.003) & (compactness <= 0.95)){
                                 Scalar color(rand() & 255, rand() & 255, rand() & 255);
                                 drawContours(drawing, contours, idx, color, CV_FILLED, 8, hierarchy);
                                 }
@@ -96,15 +104,51 @@ int main(){
                     }
                 }
             }
+        
+        //contours
+        vector<vector<Point>> contours1;
+        vector<Vec4i> hierarchy1;
+        cv::findContours(close, contours, hierarchy, CV_RETR_CCOMP, CV_CHAIN_APPROX_SIMPLE, Point(0, 0));
 
-            */
+        Mat drawing = Mat::zeros(close.size(), CV_8UC3);
+        vector<vector<Point> > contours_poly(contours.size());
+        vector<Rect> boundRect(contours.size());
 
-        imshow("Debug View", threshold);
-        while(true)
-            if(waitKey(30) >= 0)
-                break;
-    //
-    //}
+        for (int idx = 0; idx >= 0; idx = hierarchy[idx][0]){
+            // calculate parameters for filter the letters
+            approxPolyDP(Mat(contours[idx]), contours_poly[idx], 3, true);
+            boundRect[idx] = boundingRect(Mat(contours_poly[idx]));
+            float occupyrate;
+            occupyrate = (contourArea(contours[idx]) / (boundRect[idx].width * boundRect[idx].height));
+            float aspectratio;
+            aspectratio = max(boundRect[idx].height, boundRect[idx].width) / min(boundRect[idx].height, boundRect[idx].width);
+            float perimeter;
+            perimeter = arcLength(contours[idx], true);
+            float compactness;
+            compactness = contourArea(contours[idx]) / (perimeter * perimeter);
+
+            // filter contours by region areas and parameters and draw
+            RNG rng(12345);
+            {
+                if ((contourArea(contours[idx]) > CONTOUR_AREA) & (contourArea(contours[idx]) <= CONTOUR_AREA_MAX)){
+                    if ((occupyrate >= 0.03) & (occupyrate <= 0.95)){
+                        if (aspectratio <= 6){
+                            if ((compactness > 0.003) & (compactness <= 0.95)){
+                                Scalar color(rand() & 255, rand() & 255, rand() & 255);
+                                rectangle( frame, boundRect[idx].tl(), boundRect[idx].br(), color, 2, 8, 0 );
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+                                
+        
+        
+        imshow("Debug View", frame);
+
+        if(waitKey(30) >= 0) break;
+    }
     // the camera will be deinitialized automatically in VideoCapture destructor
     return 0;
 

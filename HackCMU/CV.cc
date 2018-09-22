@@ -13,8 +13,6 @@ int img = 0;
 
 int main(){
 
-    /*
-
     //open camera
     VideoCapture cap(0);
     cap.set(CV_CAP_PROP_FRAME_WIDTH,1280);
@@ -27,11 +25,9 @@ int main(){
     namedWindow("Debug View",1);
 
     while(true){
-        Mat frame;
+        Mat frame;// = imread("test2.jpg");
         cap >> frame; // get a new frame from camera
-        */
 
-        Mat frame = imread("test.jpg");
 
         /*Text Detection*/
         //greyscale
@@ -50,14 +46,13 @@ int main(){
 
         //Threshold
         Mat threshold;
-        adaptiveThreshold(open, threshold, 255, CV_ADAPTIVE_THRESH_GAUSSIAN_C, CV_THRESH_BINARY, 51, 10);
+        adaptiveThreshold(open, threshold, 255, CV_ADAPTIVE_THRESH_GAUSSIAN_C, CV_THRESH_BINARY_INV, 51, 10);
+
 
         //close
         Mat const structure_elem1 = cv::getStructuringElement(MORPH_ELLIPSE, Size(3, 3)); //rect for morphologyEx
         Mat close;
-        morphologyEx(threshold, close, MORPH_CLOSE, structure_elem);
-
-        /*
+        morphologyEx(threshold, close, MORPH_CLOSE, structure_elem1);
 
         //contours
         vector<vector<Point>> contours;
@@ -87,9 +82,10 @@ int main(){
                 if ((contourArea(contours[idx]) > CONTOUR_AREA) & (contourArea(contours[idx]) <= CONTOUR_AREA_MAX)){
                     if ((occupyrate >= 0.03) & (occupyrate <= 0.95)){
                         if (aspectratio <= 6){
-                            if (compactness > 0.003 & compactness <= 0.95){
+                            if ((compactness > 0.003) & (compactness <= 0.95)){
                                 Scalar color(rand() & 255, rand() & 255, rand() & 255);
                                 drawContours(drawing, contours, idx, color, CV_FILLED, 8, hierarchy);
+                                rectangle( frame, boundRect[idx].tl(), boundRect[idx].br(), color, 2, 8, 0 );
                                 }
                             }
                         }
@@ -97,14 +93,10 @@ int main(){
                 }
             }
 
-            */
+        imshow("Debug View", frame);
 
-        imshow("Debug View", threshold);
-        while(true)
-            if(waitKey(30) >= 0)
-                break;
-    //
-    //}
+        if(waitKey(30) >= 0) break;
+    }
     // the camera will be deinitialized automatically in VideoCapture destructor
     return 0;
 
