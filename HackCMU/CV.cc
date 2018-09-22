@@ -5,6 +5,7 @@
 
 #define CONTOUR_AREA 75
 #define CONTOUR_AREA_MAX 25000
+#define DEBUG FALSE
 #define nl "\n"
 
 using namespace std;
@@ -26,9 +27,11 @@ int main(){
     namedWindow("Debug View",1);
 
     while(true){
-        Mat frame; //= imread("test3.jpg");
-        cap >> frame; // get a new frame from camera
-
+        Mat frame;
+        if(DEBUG)
+            cap >> frame;
+        else
+            Mat frame= imread("test.jpg");
         cout<<"Loaded Frame!"<<nl;
 
         /*Text Detection*/
@@ -59,7 +62,7 @@ int main(){
         cout<<"Thresholded!"<<nl;
 
         //close
-        Mat const structure_elem1 = cv::getStructuringElement(MORPH_ELLIPSE, Size(3, 3)); //rect for morphologyEx
+        Mat const structure_elem1 = cv::getStructuringElement(MORPH_RECT, Size(17, 5)); //change size for word detection
         Mat close;
         morphologyEx(threshold, close, MORPH_CLOSE, structure_elem1);
 
@@ -70,9 +73,11 @@ int main(){
         vector<Vec4i> hierarchy;
         cv::findContours(close, contours, hierarchy, CV_RETR_CCOMP, CV_CHAIN_APPROX_SIMPLE, Point(0, 0));
 
-        Mat drawing = Mat::zeros(close.size(), CV_8UC3);
+        Mat drawing = Mat::zeros(close.size(), CV_8UC1);
         vector<vector<Point> > contours_poly(contours.size());
         vector<Rect> boundRect(contours.size());
+
+        Mat word;
 
         for (int idx = 0; idx >= 0; idx = hierarchy[idx][0]){
             // calculate parameters for filter the letters
@@ -87,6 +92,7 @@ int main(){
             float compactness;
             compactness = contourArea(contours[idx]) / (perimeter * perimeter);
 
+
             // filter contours by region areas and parameters and draw
             RNG rng(12345);
             {
@@ -94,15 +100,25 @@ int main(){
                     if ((occupyrate >= 0.03) & (occupyrate <= 0.95)){
                         if (aspectratio <= 6){
                             if ((compactness > 0.003) & (compactness <= 0.95)){
-                                Scalar color(rand() & 255, rand() & 255, rand() & 255);
-                                drawContours(drawing, contours, idx, color, CV_FILLED, 8, hierarchy);
-                                rectangle( frame, boundRect[idx].tl(), boundRect[idx].br(), color, 2, 8, 0 );
+                                if(!DEBUG){
+                                    Rect crop(boundRect[idx].tl(), boundRect[idx].br());
+                                    word = frame(crop);
+                                    string filepath ="/output/word";
+                                    filepath += idx + ".jpg";
+                                    imwrite(filepath, word);
+                                    cout<<"Saved: "<<filepath<<nl;
+                                }
+                                else{
+                                    Scalar color(rand() & 255, rand() & 255, rand() & 255);
+                                    drawContours(drawing, contours, idx, color, CV_FILLED, 8, hierarchy);
+                                    rectangle( frame, boundRect[idx].tl(), boundRect[idx].br(), color, 2, 8, 0 );
                                 }
                             }
                         }
                     }
                 }
             }
+        }
 
         imshow("Debug View", frame);
 
