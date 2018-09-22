@@ -1,0 +1,9 @@
+# depslib dependency file v1.0
+1537577623 source:/home/charles/Documents/git-repos/HackCMU/HackCMU/CV.cc
+	<string>
+	<tesseract/baseapi.h>
+	<leptonica/allheaders.h>
+	<opencv2/opencv.hpp>
+
+1537573895 source:/home/charles/Documents/git-repos/HackCMU/HackCMU/GUI.cc
+
