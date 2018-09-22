@@ -29,7 +29,6 @@ string basename( string const& pathname );
 int rmrf(char *path);
 int unlink_cb(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf);
 bool compareFn(const Rect & l, const Rect &r);
-
 int main(){
     findWords("test5.jpg");
     cout<<"segmenting words"<<endl;
