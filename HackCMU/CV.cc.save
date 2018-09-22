@@ -2,16 +2,26 @@
 #include <tesseract/baseapi.h>
 #include <leptonica/allheaders.h>
 #include <opencv2/opencv.hpp>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <ftw.h>
 
 #define CONTOUR_AREA 75
 #define CONTOUR_AREA_MAX 25000
-#define DEBUG TRUE
 #define nl "\n"
+#define _XOPEN_SOURCE 500
+
 
 using namespace std;
 using namespace cv;
 
+
 int img = 0;
+
+int rmrf(char *path);
+int unlink_cb(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf);
+bool compareFn(const Rect & l, const Rect &r);
+
 
 int main(){
 
@@ -23,16 +33,19 @@ int main(){
     if(!cap.isOpened())
         return -1;
 
-    Mat edges;
     namedWindow("Debug View",1);
 
     while(true){
         Mat frame;
-        if(DEBUG)
-            cap >> frame;
-        else
-            Mat frame= imread("test3.jpg");
-        cout<<"Loaded Frame!"<<nl;
+        //cap >> frame;
+
+        if(frame.empty()){
+            frame = imread("test4.jpg");
+            if (frame.empty())
+                cout<<"Failed to load frame"<<nl;
+            else
+                cout<<"Loaded Frame!"<<nl;
+        }
 
         /*Text Detection*/
         //greyscale
@@ -57,12 +70,12 @@ int main(){
 
         //Threshold
         Mat threshold;
-        adaptiveThreshold(open, threshold, 255, CV_ADAPTIVE_THRESH_GAUSSIAN_C, CV_THRESH_BINARY_INV, 51, 10);
+        adaptiveThreshold(open, threshold, 255, CV_ADAPTIVE_THRESH_GAUSSIAN_C, CV_THRESH_BINARY_INV, 51, 20);
 
         cout<<"Thresholded!"<<nl;
 
         //close
-        Mat const structure_elem1 = cv::getStructuringElement(MORPH_RECT, Size(17, 5)); //change size for word detection
+        Mat const structure_elem1 = cv::getStructuringElement(MORPH_RECT, Size(15, 4)); //change size for word detection
         Mat close;
         morphologyEx(threshold, close, MORPH_CLOSE, structure_elem1);
 
@@ -77,7 +90,16 @@ int main(){
         vector<vector<Point> > contours_poly(contours.size());
         vector<Rect> boundRect(contours.size());
 
+        vector<Rect> words;
+
+
         Mat word;
+
+
+        string folder = "output";
+        rmrf(const_cast<char*>(folder.c_str()));
+        mkdir(folder.c_str(), ACCESSPERMS);
+        chdir(folder.c_str());
 
         for (int idx = 0; idx >= 0; idx = hierarchy[idx][0]){
             // calculate parameters for filter the letters
@@ -92,38 +114,72 @@ int main(){
             float compactness;
             compactness = contourArea(contours[idx]) / (perimeter * perimeter);
 
-
             // filter contours by region areas and parameters and draw
-            RNG rng(12345);
-            {
-                if ((contourArea(contours[idx]) > CONTOUR_AREA) & (contourArea(contours[idx]) <= CONTOUR_AREA_MAX)){
-                    if ((occupyrate >= 0.03) & (occupyrate <= 0.95)){
-                        if (aspectratio <= 6){
-                            if ((compactness > 0.003) & (compactness <= 0.95)){
-                                if(!DEBUG){
-                                    Rect crop(boundRect[idx].tl(), boundRect[idx].br());
-                                    word = frame(crop);
-                                    string filepath ="/output/word"
-                                    filepath + idx + ".jpg";
-                                    imwrite(filepath, word);
-                                }
-                                else{
-                                    Scalar color(rand() & 255, rand() & 255, rand() & 255);
-                                    drawContours(drawing, contours, idx, color, CV_FILLED, 8, hierarchy);
-                                    rectangle( frame, boundRect[idx].tl(), boundRect[idx].br(), color, 2, 8, 0 );
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+            if ((contourArea(contours[idx]) > CONTOUR_AREA) & (contourArea(contours[idx]) <= CONTOUR_AREA_MAX))
+                if ((occupyrate >= 0.03) & (occupyrate <= 0.95))
+                    if (aspectratio <= 6)
+                        if ((compactness > 0.0003) & (compactness <= 0.95))
+                            words.push_back(boundRect[idx]);
+        }
+
+        stable_sort(words.begin(), words.end(), compareFn);
+
+        for (auto it = words.begin(); it!=words.end(); ++it){
+            string index = to_string(distance(words.begin(),it));
+
+            Rect crop(Point(it->x, it->y), Point(it->x+it->width, it->y + it->height));
+            word = frame(crop);
+            string file = "word";
+            file += index;
+            string filepath;
+            filepath += file;
+
+            mkdir(filepath.c_str(), ACCESSPERMS);
+
+            filepath+="/";
+            filepath += file;
+            filepath += ".jpg";
+
+            cout<<"Saving: "<<filepath<<"..."<<nl;
+            if(imwrite(filepath, word))
+                cout<<"Saved!"<<nl;
+            else
+                cout<<"Failed!"<<nl;
+
+            rectangle( frame, Point(it->x, it->y), Point(it->x+it->width, it->y + it->height), Scalar( 0, 255, 0 ), 2, 8, 0 );
+            putText(frame, index, Point(it->x+it->width, it->y + it->height), FONT_HERSHEY_COMPLEX_SMALL, 0.8, Scalar( 0, 255, 0 ), 1, CV_AA);
         }
 
         imshow("Debug View", frame);
-
-        if(waitKey(30) >= 0) break;
+        if(waitKey(0) >= 0) break;
     }
     // the camera will be deinitialized automatically in VideoCapture destructor
     return 0;
+
+}
+
+
+
+int unlink_cb(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf)
+{
+    int rv = remove(fpath);
+
+    if (rv)
+        perror(fpath);
+
+    return rv;
+}
+
+int rmrf(char *path)
+{
+    return nftw(path, unlink_cb, 64, FTW_DEPTH | FTW_PHYS);
+}
+
+bool compareFn(const Rect & l, const Rect &r) {//return l<r
+    if(l.br().y<r.tl().y)
+        return true;
+    else
+        return l.x<r.x;
+
 
 }
