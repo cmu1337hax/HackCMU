@@ -1,0 +1,14 @@
+{
+  "name": "phaser",
+  "homepage": "https://github.com/photonstorm/phaser",
+  "version": "3.1.0",
+  "_release": "3.1.0",
+  "_resolution": {
+    "type": "version",
+    "tag": "v3.1.0",
+    "commit": "77f165a9b9c04b8de66adf445ed2c3f9cf1e1e86"
+  },
+  "_source": "https://github.com/photonstorm/phaser.git",
+  "_target": "^3.1.0",
+  "_originalSource": "phaser"
+}

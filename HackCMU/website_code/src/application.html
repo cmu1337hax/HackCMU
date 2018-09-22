@@ -1,0 +1,66 @@
+<link rel="import" href="../../bower_components/polymer/polymer-element.html">
+<link rel="import" href="../../bower_components/polymer/polymer-element.html">
+<link rel="import" href="../libs/phaser-js.html">
+<link rel="import" href="../libs/phaser-arcade-physics-js.html">
+
+<dom-module id="client-app">
+    <template>
+      <style>
+        :host { display: block; }
+        h2 { font-weight: 200; }
+      </style>
+      <h2>Hello world!</h2>
+    </template>
+
+    <script>
+        "use strict";
+    
+        /**
+         * @customElement
+         * @polymer
+         */
+        class ClientApp extends Polymer.Element {
+          static get is() { return 'application'; }
+          static get properties() {
+            return {
+              name: {
+                type: String,
+                value: 'Hello world v2!'
+              }
+            };
+          }
+
+        preload() {}
+        create() {}
+        update( time, delta) {}
+        render() {}
+
+        constructor() {
+        super();
+
+        this.config = {
+          type: Phaser.AUTO,
+          width: 800,
+          height: 600,
+          physics: {
+            default: 'arcade',
+            arcade: {
+              gravity: { y: 0 }
+            }
+          },
+          scene: {
+            preload: this.preload,
+            create: this.create,
+            update: this.update,
+            render: this.render
+          }
+        };
+
+        this.game = new Phaser.Game( this.config); 
+      } // constructor
+    } // class
+
+    window.customElements.define( ClientApp.is, ClientApp);
+  </script>
+</dom-module>
+    

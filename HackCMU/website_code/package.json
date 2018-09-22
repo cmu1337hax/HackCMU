@@ -1,0 +1,15 @@
+{
+  "name": "photototext",
+  "version": "1.0.0",
+  "description": "Turns photographs into text",
+  "license": "BSD-3-Clause",
+  "author": "Gus, George, Chuck, Noah",
+  "main": "index.js",
+  "devDependencies": {
+    "run-script-os": "^1.0.3"
+  },
+  "scripts": {
+    "start-app": "polymer serve",
+    "install": "bower install"
+  }
+}

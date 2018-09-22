@@ -1,0 +1,7 @@
+{
+  "name": "Photo To Text",
+  "short_name": "PTT",
+  "description": "Turns Photos Into Text",
+  "start_url": "/",
+  "display": "standalone"
+}
