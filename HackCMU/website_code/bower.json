@@ -1,7 +1,7 @@
 {
   "name": "client",
   "description": "Photos to text",
-  "main": "website_code/index.html",
+  "main": "index.html",
   "dependencies": {
     "polymer": "Polymer/polymer#^2.0.0",
     "phaser": "^3.1.0",

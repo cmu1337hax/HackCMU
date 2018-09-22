@@ -11,5 +11,10 @@
   "scripts": {
     "start-app": "polymer serve",
     "install": "bower install"
+  },
+  "dependencies": {
+    "ajax": "0.0.4",
+    "jQuery": "^1.7.4",
+    "php": "0.0.1"
   }
 }

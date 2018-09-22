@@ -1,0 +1,191 @@
+<dom-module id="dragndrop">
+<style>
+#drop-area {
+    border: 2px dashed rgb(148, 195, 248);
+    border-radius: 20px;
+    width: 420px;
+    height: 130px;
+    font-family: sans-serif;
+    margin: 100px auto;
+    padding: 20px;
+    position: absolute;
+    left: 48%;
+    top: 35%;
+    margin-left: -210px;
+    margin-right: -210px;
+    z-index: 1;
+    text-align: center;
+  }
+  #drop-area.highlight {
+    border-color: purple;
+  }
+  p {
+    margin-top: 0;
+  }
+  .my-form {
+    margin-bottom: 10px;
+  }
+  #gallery {
+    margin-top: 10px;
+  }
+  #gallery img {
+    width: 150px;
+    margin-bottom: 10px;
+    margin-right: 10px;
+    vertical-align: middle;
+  }
+  .button {
+    display: flex;
+    padding: 10px;
+    background: rgb(204, 204, 204);
+    cursor: pointer;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+  }
+  #button {
+    left: 50%;
+  }
+  .button:hover {
+    background: #ddd;
+  }
+  #fileElem {
+    display: none;
+  }
+  showText {
+    margin-top: 0;
+  }
+  #printText {
+    font-size: 100px;
+    
+    bottom: 100%;
+    left: 30%;
+    position: absolute;
+    text-align: center;
+    font-family: 'Arial Black', sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+</style>
+
+<script>
+    //Followed tutorial at: https://www.smashingmagazine.com/2018/01/drag-drop-file-uploader-vanilla-js/
+    //Reread if want to update progress bar further
+    window.onload = function() {
+        let dropArea = document.getElementById("drop-area");
+        console.log(dropArea);
+        //Shortens amount of code necessary
+        /**/
+        let filesDone = 0
+        let filesToDo = 0
+        let progressBar = document.getElementById('progress-bar')
+        
+    ;['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            console.log(dropArea);
+            dropArea.addEventListener(eventName, preventDefaults, false)
+    })
+
+    ;['dragenter', 'dragover'].forEach(eventName => {
+        dropArea.addEventListener(eventName, highlight, false)
+    })
+
+    ;['dragleave', 'drop'].forEach(eventName => {
+        dropArea.addEventListener(eventName, unhighlight, false)
+    })
+
+    dropArea.addEventListener('drop', handleDrop, false)
+    }
+
+    function preventDefaults (e) {
+        e.preventDefault()
+        e.stopPropagation()
+    }
+
+    function highlight(e) {
+        let dropArea = document.getElementById("drop-area");
+        dropArea.classList.add('highlight')
+    }
+
+    function unhighlight(e) {
+        let dropArea = document.getElementById("drop-area");
+        dropArea.classList.remove('highlight')
+    }
+    
+    function handleDrop(e) {
+        let dt = e.dataTransfer
+        let files = dt.files
+
+        handleFiles(files)
+    }
+
+    function handleFiles(files) {
+        ([...files]).forEach(uploadFile)
+        initializeProgress(files.length)
+        files.forEach(uploadFile)
+        files.forEach(previewFile)
+    }
+
+    //https://stackoverflow.com/questions/40303335/how-to-read-image-from-json-data-transfer
+    function uploadFile(file) {
+        let url = 'YOUR URL HERE'
+        
+        let formData = new FormData()
+        
+
+        var canvas = document.getElementById("canvas");
+        var image = new Image();
+        image.src = file.src;
+        canvas.getContext('2d').drawImage(image, 0, 0);
+        var imgData = canvas.toDataURL();
+        var imgDatajpeg = canvas.toDataURL("image/jpeg"); 
+        console.log(imgDatajpeg);
+
+        
+        //Turn any photo format to jpeg.
+        formData.append('file', file)
+
+        fetch(url, {
+            method: 'POST',
+            body: formData
+        })
+        .then(function send(){ 
+            processing = true;
+            changeText("YES!");
+            progressDone(); 
+        })  
+        .catch(() => { /* Error. Inform the user */ })
+    }
+
+    function finishedProcessing() {
+        processing = false;
+        firstProcess = 0;
+        //changeText("YES!");
+    }
+
+    function previewFile(file) {
+        console.log("Hi!");
+        let reader = new FileReader()
+        reader.readAsDataURL(file)
+        reader.onloadend = function() {
+            let img = document.createElement('img')
+            img.src = reader.result
+            document.getElementById('gallery').appendChild(img)
+        }
+    }
+
+    function initializeProgress(numfiles) {
+        let progressBar = document.getElementById('progress-bar')
+        progressBar.value = 0
+        filesDone = 0
+        filesToDo = numfiles
+    }
+
+    function progressDone() {
+        filesDone++
+        progressBar.value = filesDone / filesToDo * 100
+    }
+
+    function changeText(newText){
+        console.log('hi');
+        document.getElementById("printText").innerHTML = newText;
+    }
+</script>
+</dom-module>

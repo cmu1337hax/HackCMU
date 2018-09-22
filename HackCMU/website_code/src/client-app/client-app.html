@@ -1,0 +1,125 @@
+<link rel="import" href="../../bower_components/polymer/polymer-element.html">
+<link rel="import" href="../../bower_components/polymer/polymer-element.html">
+<link rel="import" href="../libraries/phaser-js.html">
+<link rel="import" href="../libraries/phaser-arcade-physics-js.html">
+
+<dom-module id="client-app">
+    <template>
+      <style>
+        :host { display: block; }
+        h2 { font-weight: 200; }
+        .inner {
+          position: absolute;
+        }
+      </style>
+      <h2>Place An Image of Your Handwriting On The Table And Watch The Magic Happen!</h2>
+    </template>
+
+    <script>
+    var processing = false;
+    var firstProcess = 0;
+    var magician;
+    var staticMagician;
+        "use strict";
+    
+        /**
+         * @customElement
+         * @polymer
+         */
+      class ClientApp extends Polymer.Element {
+      static get is() { return 'client-app'; }
+      static get properties() {
+        return {
+          name: {
+            type: String,
+            value: 'lac Léman'
+          }
+        };
+      }
+
+        preload() {
+          // Note: Phaser sets `this` to the current Phaser Scene instance before calling this function
+          const scene = this;
+          //scene.load.image('background', 'assets/background.jpg');
+          scene.load.image('altar', 'assets/altar.png');  //Replace with Animation
+          scene.load.spritesheet( 'magician', 'assets/magician-spritesheet.png', { frameWidth: 200, frameHeight: 200, endFrame: 1 });   
+          scene.load.image('staticMage', 'assets/magician-static.png');    
+        }
+
+        create() {
+          const scene = this;
+          staticMagician = scene.add.sprite(200, 200, 'staticMage');
+          staticMagician.setScale(1,1);
+          var altar = scene.add.image(435, 510, 'altar');
+          altar.setScale(1.5, 1);
+          //altar.x = 400;
+          //altar.y = 500;
+
+          scene.anims.create({
+                key: 'performMagic',
+                  frames: scene.anims.generateFrameNumbers('magician', { start: 0, end: 1 }),
+                  frameRate: 10,
+                  repeat: -1
+                });
+        }
+        update( time, delta) {
+          var scene = this;
+          
+          if(processing) {
+            if(firstProcess == 0) {
+              firstProcess = 1;
+              staticMagician.visible = false;
+              if(magician == null) {
+                magician = scene.add.sprite(200, 200, 'performMagic');
+                magician.anims.load('performMagic');
+              }
+              if(magician != null) {
+                  
+                magician.anims.play('performMagic');
+              }
+            }
+          } else {
+            if(magician != null) {
+              if(magician.visible == false) {
+                magician.visible = true;
+                staticMagician = false;
+              }
+            }
+          }
+
+        }
+
+        setProcessing() {
+          
+        }
+        
+
+        constructor() {
+        super();
+
+        this.config = {
+          type: Phaser.AUTO,
+          width: 800,
+          height: 600,
+          backgroundColor:'#ffffff',
+          physics: {
+            default: 'arcade',
+            arcade: {
+              gravity: { y: 0 }
+            }
+          },
+          scene: {
+            preload: this.preload,
+            create: this.create,
+            update: this.update,
+            setProcessing: this.setProcessing
+          }
+        };
+
+        this.game = new Phaser.Game( this.config); 
+      } // constructor
+    } // class
+
+    window.customElements.define( ClientApp.is, ClientApp);
+  </script>
+</dom-module>
