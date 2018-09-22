@@ -5,166 +5,301 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <ftw.h>
+#include <assert.h>
 
 #define CONTOUR_AREA 75
 #define CONTOUR_AREA_MAX 25000
 #define nl "\n"
 #define _XOPEN_SOURCE 500
 
+struct MatchPathSeparator
+{
+    bool operator()( char ch ) const
+    {
+        return ch == '/';
+    }
+};
+
+std::string basename( std::string const& pathname ){
+    return std::string(
+        std::find_if( pathname.rbegin(), pathname.rend(),
+                      MatchPathSeparator() ).base(),
+        pathname.end() );
+}
 
 using namespace std;
 using namespace cv;
 
-
-int img = 0;
+void findWords(string);
+int wordsToLetters(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf);
+int wtlr(string);
 
 int rmrf(char *path);
 int unlink_cb(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf);
 bool compareFn(const Rect & l, const Rect &r);
 
-
 int main(){
+    findWords("test5.jpg");
+    cout<<"segmenting words"<<endl;
+    string folder = "output";
+    cout<<wtlr(folder.c_str())<<endl;
+    cout<<strerror(errno)<<endl;
 
-    //open camera
-    VideoCapture cap(0);
-    cap.set(CV_CAP_PROP_FRAME_WIDTH,1280);
-    cap.set(CV_CAP_PROP_FRAME_HEIGHT,720);
+    return 0;
+}
 
-    if(!cap.isOpened())
-        return -1;
+void findWords(string path){
 
     namedWindow("Debug View",1);
+    Mat frame;
 
-    while(true){
-        Mat frame;
-        //cap >> frame;
-
-        if(frame.empty()){
-            frame = imread("test1.jpg");
-            if (frame.empty())
-                cout<<"Failed to load frame"<<nl;
-            else
-                cout<<"Loaded Frame!"<<nl;
-        }
-
-        /*Text Detection*/
-        //greyscale
-        Mat grey;
-        cvtColor(frame,grey,CV_BGR2GRAY);
-        grey.convertTo(grey, CV_8U);
-
-        cout<<"Greyscaled!"<<nl;
-
-        //blur
-        Mat blur;
-        GaussianBlur(grey,blur,Size(3,3),1.5); //kernel size, sigma y
-
-        cout<<"Blurred!"<<nl;
-
-        //open
-        Mat const structure_elem = cv::getStructuringElement(MORPH_RECT, Size(5, 5)); //rect for morphologyEx
-        Mat open;
-        morphologyEx(blur, open, MORPH_OPEN, structure_elem);
-
-        cout<<"Opened!"<<nl;
-
-        //Threshold
-        Mat threshold;
-        adaptiveThreshold(open, threshold, 255, CV_ADAPTIVE_THRESH_GAUSSIAN_C, CV_THRESH_BINARY_INV, 51, 10);
-
-        cout<<"Thresholded!"<<nl;
-
-        //close
-        double r = (double)countNonZero(threshold)/(frame.cols*frame.rows);cout<<r<<nl;
-        Mat const structure_elem1 = cv::getStructuringElement(MORPH_RECT, Size(1.6/r, 2)); //change size for word detection
-        Mat close;
-        morphologyEx(threshold, close, MORPH_CLOSE, structure_elem1);
-
-        cout<<"Closed!"<<nl;
-
-        //contours
-        vector<vector<Point>> contours;
-        vector<Vec4i> hierarchy;
-        cv::findContours(close, contours, hierarchy, CV_RETR_CCOMP, CV_CHAIN_APPROX_SIMPLE, Point(0, 0));
-
-        Mat drawing = Mat::zeros(close.size(), CV_8UC1);
-        vector<vector<Point> > contours_poly(contours.size());
-        vector<Rect> boundRect(contours.size());
-
-        vector<Rect> words;
-
-
-        Mat word;
-
-
-        string folder = "output";
-        rmrf(const_cast<char*>(folder.c_str()));
-        mkdir(folder.c_str(), ACCESSPERMS);
-        chdir(folder.c_str());
-
-        for (int idx = 0; idx >= 0; idx = hierarchy[idx][0]){
-            // calculate parameters for filter the letters
-            approxPolyDP(Mat(contours[idx]), contours_poly[idx], 3, true);
-            boundRect[idx] = boundingRect(Mat(contours_poly[idx]));
-            float occupyrate;
-            occupyrate = (contourArea(contours[idx]) / (boundRect[idx].width * boundRect[idx].height));
-            float aspectratio;
-            aspectratio = max(boundRect[idx].height, boundRect[idx].width) / min(boundRect[idx].height, boundRect[idx].width);
-            float perimeter;
-            perimeter = arcLength(contours[idx], true);
-            float compactness;
-            compactness = contourArea(contours[idx]) / (perimeter * perimeter);
-
-            // filter contours by region areas and parameters and draw
-            if ((contourArea(contours[idx]) > CONTOUR_AREA) & (contourArea(contours[idx]) <= CONTOUR_AREA_MAX))
-                if ((occupyrate >= 0.03) & (occupyrate <= 0.95))
-                    if (aspectratio <= 6)
-                        if ((compactness > 0.0003) & (compactness <= 0.95))
-                            words.push_back(boundRect[idx]);
-        }
-
-        stable_sort(words.begin(), words.end(), compareFn);
-
-        for (auto it = words.begin(); it!=words.end(); ++it){
-            string index = to_string(distance(words.begin(),it));
-
-            Rect crop(Point(it->x, it->y), Point(it->x+it->width, it->y + it->height));
-            word = frame(crop);
-            string file = "word";
-            file += index;
-            string filepath;
-            filepath += file;
-
-            mkdir(filepath.c_str(), ACCESSPERMS);
-
-            filepath+="/";
-            filepath += file;
-            filepath += ".jpg";
-
-            cout<<"Saving: "<<filepath<<"..."<<nl;
-            if(imwrite(filepath, word))
-                cout<<"Saved!"<<nl;
-            else
-                cout<<"Failed!"<<nl;
-
-            rectangle( frame, Point(it->x, it->y), Point(it->x+it->width, it->y + it->height), Scalar( 0, 255, 0 ), 2, 8, 0 );
-            putText(frame, index, Point(it->x+it->width, it->y + it->height), FONT_HERSHEY_COMPLEX_SMALL, 0.8, Scalar( 0, 255, 0 ), 1, CV_AA);
-        }
-
-        imshow("Debug View", frame);
-        if(waitKey(0) >= 0) break;
+    if(frame.empty()){
+        frame = imread(path);
+        if (frame.empty())
+            cout<<"Failed to load frame"<<nl;
+        else
+            cout<<"Loaded Frame!"<<nl;
     }
-    // the camera will be deinitialized automatically in VideoCapture destructor
-    return 0;
+
+    /*Text Detection*/
+    //greyscale
+    Mat grey;
+    cvtColor(frame,grey,CV_BGR2GRAY);
+    grey.convertTo(grey, CV_8U);
+
+    cout<<"Greyscaled!"<<nl;
+
+    //blur
+    Mat blur;
+    GaussianBlur(grey,blur,Size(3,3),1.5); //kernel size, sigma y
+
+    cout<<"Blurred!"<<nl;
+
+    //open
+    Mat const structure_elem = cv::getStructuringElement(MORPH_RECT, Size(5, 5)); //rect for morphologyEx
+    Mat open;
+    morphologyEx(blur, open, MORPH_OPEN, structure_elem);
+
+    cout<<"Opened!"<<nl;
+
+    //Threshold
+    Mat threshold;
+    adaptiveThreshold(open, threshold, 255, CV_ADAPTIVE_THRESH_GAUSSIAN_C, CV_THRESH_BINARY_INV, 51, 10);
+
+    cout<<"Thresholded!"<<nl;
+
+    //close
+    double r = (double)countNonZero(threshold)/(frame.cols*frame.rows);cout<<r<<nl;
+    Mat const structure_elem1 = cv::getStructuringElement(MORPH_RECT, Size(1.6/r, 5)); //change size for word detection
+    Mat close;
+    morphologyEx(threshold, close, MORPH_CLOSE, structure_elem1);
+
+    cout<<"Closed!"<<nl;
+
+    //contours
+    vector<vector<Point>> contours;
+    vector<Vec4i> hierarchy;
+    cv::findContours(close, contours, hierarchy, CV_RETR_CCOMP, CV_CHAIN_APPROX_SIMPLE, Point(0, 0));
+
+    Mat drawing = Mat::zeros(close.size(), CV_8UC1);
+    vector<vector<Point> > contours_poly(contours.size());
+    vector<Rect> boundRect(contours.size());
+
+    vector<Rect> words;
+
+
+    Mat word;
+
+
+    string folder = "output";
+    rmrf(const_cast<char*>(folder.c_str()));
+    mkdir(folder.c_str(), ACCESSPERMS);
+    chdir(folder.c_str());
+
+    for (int idx = 0; idx >= 0; idx = hierarchy[idx][0]){
+        // calculate parameters for filter the letters
+        approxPolyDP(Mat(contours[idx]), contours_poly[idx], 3, true);
+        boundRect[idx] = boundingRect(Mat(contours_poly[idx]));
+        float occupyrate;
+        occupyrate = (contourArea(contours[idx]) / (boundRect[idx].width * boundRect[idx].height));
+        float aspectratio;
+        aspectratio = max(boundRect[idx].height, boundRect[idx].width) / min(boundRect[idx].height, boundRect[idx].width);
+        float perimeter;
+        perimeter = arcLength(contours[idx], true);
+        float compactness;
+        compactness = contourArea(contours[idx]) / (perimeter * perimeter);
+
+        // filter contours by region areas and parameters and draw
+        if ((contourArea(contours[idx]) > CONTOUR_AREA) & (contourArea(contours[idx]) <= CONTOUR_AREA_MAX))
+            if ((occupyrate >= 0.03) & (occupyrate <= 0.95))
+                if (aspectratio <= 6)
+                    if ((compactness > 0.0003) & (compactness <= 0.95))
+                        words.push_back(boundRect[idx]);
+    }
+
+    stable_sort(words.begin(), words.end(), compareFn);
+
+    for (auto it = words.begin(); it!=words.end(); ++it){
+        string index = to_string(distance(words.begin(),it));
+
+        Rect crop(Point(it->x, it->y), Point(it->x+it->width, it->y + it->height));
+        word = frame(crop);
+
+        string file = "word";
+        file += index;
+        string filepath;
+        filepath += file;
+
+        mkdir(filepath.c_str(), ACCESSPERMS);
+
+        filepath+="/";
+        filepath += file;
+        filepath += ".jpg";
+
+        cout<<"Saving: "<<filepath<<"..."<<nl;
+        if(imwrite(filepath, word))
+            cout<<"Saved!"<<nl;
+        else
+            cout<<"Failed!"<<nl;
+
+        rectangle( frame, Point(it->x, it->y), Point(it->x+it->width, it->y + it->height), Scalar( 0, 255, 0 ), 2, 8, 0 );
+        putText(frame, index, Point(it->x+it->width, it->y + it->height), FONT_HERSHEY_COMPLEX_SMALL, 0.8, Scalar( 0, 255, 0 ), 1, CV_AA);
+
+    }
+
+    cout<<"Found Words!"<<endl;
+    words.clear();
+
+    string up = "..";
+    chdir(up.c_str());
+    imshow("Debug View", frame);
+    while(true) if(waitKey(0) >= 0) break;
 
 }
 
+int wordsToLetters(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf){
 
+    char buff[FILENAME_MAX];
+    string cwd = getcwd(buff, FILENAME_MAX);
+    cout<<fpath<<endl;
+    cout<<cwd<<endl;
 
+    cout<<"running"<<endl;
+    Mat frame;
+    frame = imread(basename(fpath));
+    if (frame.empty())
+        return 0;
+    else
+        cout<<"Loaded Frame!"<<nl;
 
+    /*Text Detection*/
+    //greyscale
+    Mat grey;
+    cvtColor(frame,grey,CV_BGR2GRAY);
+    grey.convertTo(grey, CV_8U);
 
-int unlink_cb(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf)
-{
+    cout<<"Greyscaled!"<<nl;
+
+    //blur
+    Mat blur;
+    GaussianBlur(grey,blur,Size(3,3),1.5); //kernel size, sigma y
+
+    cout<<"Blurred!"<<nl;
+
+    //open
+    Mat const structure_elem = cv::getStructuringElement(MORPH_RECT, Size(5, 5)); //rect for morphologyEx
+    Mat open;
+    morphologyEx(blur, open, MORPH_OPEN, structure_elem);
+
+    cout<<"Opened!"<<nl;
+
+    //Threshold
+    Mat threshold;
+    adaptiveThreshold(open, threshold, 255, CV_ADAPTIVE_THRESH_GAUSSIAN_C, CV_THRESH_BINARY_INV, 51, 10);
+
+    cout<<"Thresholded!"<<nl;
+
+    //close
+    double r = (double)countNonZero(threshold)/(frame.cols*frame.rows);cout<<r<<nl;
+    Mat const structure_elem1 = cv::getStructuringElement(MORPH_RECT, Size(5, 5)); //change size for word detection
+    Mat close;
+    morphologyEx(threshold, close, MORPH_CLOSE, structure_elem1);
+
+    cout<<"Closed!"<<nl;
+
+    //contours
+    vector<vector<Point>> contours;
+    vector<Vec4i> hierarchy;
+    cv::findContours(close, contours, hierarchy, CV_RETR_CCOMP, CV_CHAIN_APPROX_SIMPLE, Point(0, 0));
+
+    Mat drawing = Mat::zeros(close.size(), CV_8UC1);
+    vector<vector<Point> > contours_poly(contours.size());
+    vector<Rect> boundRect(contours.size());
+
+    vector<Rect> words;
+
+    cout<<"Contoured!"<<nl;
+
+    Mat word;
+
+    if(boundRect.size()>0){}
+    for (int idx = 0; idx >= 0; idx = hierarchy[idx][0]){
+        // calculate parameters for filter the letters
+        approxPolyDP(Mat(contours[idx]), contours_poly[idx], 3, true);
+        boundRect[idx] = boundingRect(Mat(contours_poly[idx]));
+        float occupyrate;
+        occupyrate = (contourArea(contours[idx]) / (boundRect[idx].width * boundRect[idx].height));
+        float aspectratio;
+        aspectratio = max(boundRect[idx].height, boundRect[idx].width) / min(boundRect[idx].height, boundRect[idx].width);
+        float perimeter;
+        perimeter = arcLength(contours[idx], true);
+        float compactness;
+        compactness = contourArea(contours[idx]) / (perimeter * perimeter);
+
+        // filter contours by region areas and parameters and draw
+        if ((contourArea(contours[idx]) > CONTOUR_AREA) & (contourArea(contours[idx]) <= CONTOUR_AREA_MAX))
+            if ((occupyrate >= 0.03) & (occupyrate <= 0.95))
+                if (aspectratio <= 6)
+                    if ((compactness > 0.0003) & (compactness <= 0.95))
+                        words.push_back(boundRect[idx]);
+    }
+
+    stable_sort(words.begin(), words.end(), compareFn);
+
+    cout<<"Sorted!"<<nl;
+
+    for (auto it = words.begin(); it!=words.end(); ++it){
+        string index = to_string(distance(words.begin(),it));
+
+        Rect crop(Point(it->x, it->y), Point(it->x+it->width, it->y + it->height));
+        word = frame(crop);
+
+        string file = "letter";
+        file += index;
+        file += ".jpg";
+
+        cout<<"Saving: "<<file<<"..."<<nl;
+        if(imwrite(file, word))
+            cout<<"Saved!"<<nl;
+        else
+            cout<<"Failed!"<<nl;
+
+        rectangle( frame, Point(it->x, it->y), Point(it->x+it->width, it->y + it->height), Scalar( 0, 255, 0 ), 2, 8, 0 );
+        putText(frame, index, Point(it->x+it->width, it->y + it->height), FONT_HERSHEY_COMPLEX_SMALL, 0.8, Scalar( 0, 255, 0 ), 1, CV_AA);
+
+    }
+    
+    
+    cout<<"Finished Word!"<<endl;
+    words.clear();
+    return 0;
+}
+
+int wtlr(string directory){
+    return nftw(directory.c_str(), wordsToLetters, 64, FTW_DEPTH | FTW_PHYS | FTW_CHDIR);
+}
+
+int unlink_cb(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf){
     int rv = remove(fpath);
 
     if (rv)
@@ -173,8 +308,7 @@ int unlink_cb(const char *fpath, const struct stat *sb, int typeflag, struct FTW
     return rv;
 }
 
-int rmrf(char *path)
-{
+int rmrf(char *path){
     return nftw(path, unlink_cb, 64, FTW_DEPTH | FTW_PHYS);
 }
 
