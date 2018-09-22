@@ -194,6 +194,15 @@ char guess(vector<float> img,float thresh)
 	return allOut[max];
 }
 
+void run(vector<float> img)
+{
+	ofstream blah;
+	blah.open("output.txt");
+	blah << guess(img, .80);
+	blah.close();
+
+}
+
 //string serialize(Layer l)
 //{
 //	string output;
