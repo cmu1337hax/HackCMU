@@ -40,7 +40,7 @@ int main(){
         //cap >> frame;
 
         if(frame.empty()){
-            frame = imread("test4.jpg");
+            frame = imread("test1.jpg");
             if (frame.empty())
                 cout<<"Failed to load frame"<<nl;
             else
@@ -62,7 +62,7 @@ int main(){
         cout<<"Blurred!"<<nl;
 
         //open
-        Mat const structure_elem = cv::getStructuringElement(MORPH_RECT, Size(4, 2)); //rect for morphologyEx
+        Mat const structure_elem = cv::getStructuringElement(MORPH_RECT, Size(5, 5)); //rect for morphologyEx
         Mat open;
         morphologyEx(blur, open, MORPH_OPEN, structure_elem);
 
@@ -70,12 +70,13 @@ int main(){
 
         //Threshold
         Mat threshold;
-        adaptiveThreshold(open, threshold, 255, CV_ADAPTIVE_THRESH_GAUSSIAN_C, CV_THRESH_BINARY_INV, 51, 20);
+        adaptiveThreshold(open, threshold, 255, CV_ADAPTIVE_THRESH_GAUSSIAN_C, CV_THRESH_BINARY_INV, 51, 10);
 
         cout<<"Thresholded!"<<nl;
 
         //close
-        Mat const structure_elem1 = cv::getStructuringElement(MORPH_RECT, Size(15, 4)); //change size for word detection
+        double r = (double)countNonZero(threshold)/(frame.cols*frame.rows);cout<<r<<nl;
+        Mat const structure_elem1 = cv::getStructuringElement(MORPH_RECT, Size(1.6/r, 2)); //change size for word detection
         Mat close;
         morphologyEx(threshold, close, MORPH_CLOSE, structure_elem1);
 
@@ -157,6 +158,8 @@ int main(){
     return 0;
 
 }
+
+
 
 
 
