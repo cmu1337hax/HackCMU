@@ -29,7 +29,6 @@ string basename( string const& pathname );
 int rmrf(char *path);
 int unlink_cb(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf);
 bool compareFn(const Rect & l, const Rect &r);
-
 int main(){
     findWords("test5.jpg");
     cout<<"segmenting words"<<endl;
@@ -267,7 +266,7 @@ int wordsToLetters(const char *fpath, const struct stat *sb, int typeflag, struc
 
             word = threshold(crop);
             bitwise_not(word,word);
-            threshold(word, word, 127, 255, THRESH_BINARY);
+            cv::threshold(word, word, 0, 255, THRESH_BINARY);
 
             resize(word,word, Size(8,8),0,0,INTER_LINEAR);
 
