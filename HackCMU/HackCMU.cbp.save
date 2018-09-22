@@ -31,12 +31,22 @@
 				</Compiler>
 				<Linker>
 					<Add option="-s" />
+					<Add option="-ltesseract" />
+					<Add option="-lopencv_core" />
+					<Add option="-lopencv_imgproc" />
+					<Add option="-lopencv_highgui" />
 				</Linker>
 			</Target>
 		</Build>
 		<Compiler>
 			<Add option="-Wall" />
 		</Compiler>
+		<Linker>
+			<Add option="-ltesseract" />
+			<Add option="-lopencv_core" />
+			<Add option="-lopencv_imgproc" />
+			<Add option="-lopencv_highgui" />
+		</Linker>
 		<Unit filename="CV.cc" />
 		<Unit filename="GUI.cc" />
 		<Extensions>
